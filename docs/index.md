@@ -73,7 +73,9 @@ The whole configuration file (available [here][dsm-dibs-yaml]) is as
 follows:
 
 ~~~ yaml
---- name: sample-mojo variables:
+---
+name: sample-mojo
+variables:
    - &base     'alpine:3.6'
    - &builder  'sample-mojo-builder:1.0'
    - &bundler  'sample-mojo-bundler:1.0'
@@ -168,6 +170,70 @@ actions:
       - bundle-operations
 ~~~
 
+The `name` section just provides the name for temporary intermediate
+container images. Parameter `origin` is set to the remote address of the
+`git` repository of the code we want to package, which will be cloned and
+checked out automatically inside sub-directory `src`. The rest is
+explained in the following sections.
+
+## Variables
+
+As with regular code, it's useful to define some values once and then
+reuse them multiple times. Dibs calls them *variables*, although they are
+probably more like *constants*.
+
+In our case, the `variables` section is the following:
+
+~~~ yaml
+variables:
+   - &base     'alpine:3.6'
+   - &builder  'sample-mojo-builder:1.0'
+   - &bundler  'sample-mojo-bundler:1.0'
+   - &target   'sample-mojo:1.0'
+   - &username 'urist'
+   - &appsrc   {path_src: '.'}
+   - &appcache {path_cache: 'perl-app'}
+   - &appdir   '/app'
+~~~
+
+All items are associated to a YAML anchor, for easy internal referencing
+through aliases.
+
+The first four items specify image names and tags, the first one being the
+starting point (anchor `&base`), the two folling ones representing base
+images for building and bundling, and the last one (anchor `&target`)
+represeting our target image name. We will define two intermediate
+container images in order to efficiently support a build phase (leveraging
+an image with build tools inside) and a bundle phase (including only
+runtime tools).
+
+The build step, i.e. when Perl modules are compiled and installed, will be
+performed using an unprivileged user account; anchor `&username` defines
+the name for such account, and will be used both to create the user and to
+run the build of modules, as well as it is set as the default user for
+running the target container. Defining its value in one single place will
+allow us to select some other username (e.g. one that is *not* tied to
+game Dwarf Fortress!).
+
+The last three items define paths. As anticipated, we will generate
+artifacts in a build phase, at the end of which we select the needed ones
+and copy somewhere inside the *cache*; afterwards, we will run the leaner
+*bundle* container and put files in place, copying them *from* the cache.
+
+## Pack(s)
+
+This example makes use of a single dibspack, i.e. [dibspack-basic][],
+because it contains all the programs that we need to run.
+
+~~~ yaml
+packs:
+   basic:
+      type: git
+      origin: https://github.com/polettix/dibspack-basic.git
+~~~
+
+
+
 
 [dibs]: https://github.com/polettix/dibs
 [Dockerfile]: https://docs.docker.com/engine/reference/builder/
@@ -177,3 +243,5 @@ actions:
 [dokku-paas]: http://blog.polettix.it/dokku-your-tiny-paas/
 [dibs-sample-mojo]: https://github.com/polettix/dibs-sample-mojo 
 [dsm-dibs-yaml]: https://github.com/polettix/dibs-sample-mojo/blob/master/dibs.yml
+[perl]: https://www.perl.org/
+[dibspack-basic]: https://github.com/polettix/dibspack-basic
