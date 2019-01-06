@@ -1,8 +1,8 @@
 ---
-
+title: Let's Use dibs
 ---
 
-# Example Usage of [dibs][]
+# Let's Use [dibs][]!
 
 More on this later...
 
