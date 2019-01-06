@@ -13,6 +13,8 @@ this article focuses on a practical example of using Dibs for packaging an
 external project that is not aware of Dibs itself (using the so-called [alien
 mode][alien]).
 
+Table of contents:
+
 * TOC
 {:toc}
 
@@ -67,6 +69,104 @@ the different phases of our image construction process (i.e. `build` and
 
 # The Configuration File
 
+The whole configuration file (available [here][dsm-dibs-yaml]) is as
+follows:
+
+~~~ yaml
+--- name: sample-mojo variables:
+   - &base     'alpine:3.6'
+   - &builder  'sample-mojo-builder:1.0'
+   - &bundler  'sample-mojo-bundler:1.0'
+   - &target   'sample-mojo:1.0'
+   - &username 'urist'
+   - &appsrc   {path_src: '.'}
+   - &appcache {path_cache: 'perl-app'}
+   - &appdir   '/app'
+origin: 'https://github.com/polettix/sample-mojo.git'
+packs:
+   basic:
+      type: git
+      origin: https://github.com/polettix/dibspack-basic.git
+actions:
+   ensure-prereqs:
+      pack: basic
+      path: prereqs
+      args: ['-w', {path_pack: '.'}]
+      user: root
+   add-normal-user:
+      pack: basic
+      path: wrapexec/suexec
+      args: ['-u', *username, '-h', *appdir]
+      user: root
+   base-layers:
+      - from: *base
+      - add-normal-user
+      - ensure-prereqs
+   buildish:
+      envile:
+         DIBS_PREREQS: build
+   builder:
+      extends: buildish
+      actions:
+         - base-layers
+         - tags: *builder
+   build-operations:
+      - name: compile modules
+        pack: basic
+        path: perl/build
+        user: *username
+      - name: copy needed artifacts in cache
+        pack: basic
+        path: install/with-dibsignore
+        args: ['--src', *appsrc,
+               '--dst', *appcache,
+               '--dibsignore', {path_pack: 'dibsignore'}]
+        user: root
+   build:
+      extends: buildish
+      actions:
+         - from: *builder
+         - ensure-prereqs
+         - build-operations
+   buildq:
+      - from: *builder
+      - build-operations
+   bundlish:
+      envile:
+         DIBS_PREREQS: bundle
+   bundler:
+      extends: bundlish
+      actions:
+         - base-layers
+         - tags: *bundler
+   bundle-operations:
+      - name: move artifacts in place
+        pack: basic
+        path: install/plain-copy
+        args: [*appcache, *appdir]
+        user: root
+      - name: setup Procfile
+        pack: basic
+        path: procfile/add
+        user: root
+        env:
+           PORT: 56789
+        commit:
+           entrypoint: ['/procfilerun']
+           cmd: []
+           user: *username
+           workdir: *appdir
+      - tags: *target
+   bundle:
+      extends: bundlish
+      actions:
+         - from: *bundler
+         - ensure-prereqs
+         - bundle-operations
+   bundleq:
+      - from: *bundler
+      - bundle-operations
+~~~
 
 
 [dibs]: https://github.com/polettix/dibs
@@ -76,3 +176,4 @@ the different phases of our image construction process (i.e. `build` and
 [sample-mojo]: https://github.com/polettix/sample-mojo
 [dokku-paas]: http://blog.polettix.it/dokku-your-tiny-paas/
 [dibs-sample-mojo]: https://github.com/polettix/dibs-sample-mojo 
+[dsm-dibs-yaml]: https://github.com/polettix/dibs-sample-mojo/blob/master/dibs.yml
