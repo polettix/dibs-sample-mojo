@@ -200,7 +200,7 @@ All items are associated to a YAML anchor, for easy internal referencing
 through aliases.
 
 The first four items specify image names and tags, the first one being the
-starting point (anchor `&base`), the two folling ones representing base
+starting point (anchor `&base`), the two following ones representing base
 images for building and bundling, and the last one (anchor `&target`)
 represeting our target image name. We will define two intermediate
 container images in order to efficiently support a build phase (leveraging
