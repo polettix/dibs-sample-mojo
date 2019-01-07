@@ -240,6 +240,30 @@ the configuration.
 The `actions` section is by far the most crowded in the configuration
 file.
 
+### Pure Strokes
+
+Actions `ensure-prereqs` and `add-normal-user` are pure *strokes*, defined
+for convenience. Strictly speaking, `add-normal-user` is only used once
+(inside `base-layers`) and might be *inlined*; on the other hand,
+`ensure-prereqs` is used multiple times (in `base-layers` as well as in
+`build` and `bundle`), so it's better to define it once and the use many
+times.
+
+~~~ yaml
+actions:
+   ensure-prereqs:
+      pack: basic
+      path: prereqs
+      args: ['-w', {path_pack: '.'}]
+      user: root
+   add-normal-user:
+      pack: basic
+      path: wrapexec/suexec
+      args: ['-u', *username, '-h', *appdir]
+      user: root
+   # ...
+~~~
+
 ### "Abstract" Actions
 
 ~~~ yaml
@@ -264,30 +288,6 @@ and `build` both inherit from `buildish`, as well as `bundler` and
 `DIBS_PREREQS` envile sets the `step` for action `ensure-prereqs` and will
 eventually allow selecting between file `pack/prereqs/alpine.build` and
 `pack/prereqs/alpine.bundle`.
-
-### Pure Strokes
-
-Actions `ensure-prereqs` and `add-normal-user` are pure *strokes*, defined
-for convenience. Strictly speaking, `add-normal-user` is only used once
-(inside `base-layers`) and might be *inlined*; on the other hand,
-`ensure-prereqs` is used multiple times (in `base-layers` as well as in
-`build` and `bundle`), so it's better to define it once and the use many
-times.
-
-~~~ yaml
-actions:
-   ensure-prereqs:
-      pack: basic
-      path: prereqs
-      args: ['-w', {path_pack: '.'}]
-      user: root
-   add-normal-user:
-      pack: basic
-      path: wrapexec/suexec
-      args: ['-u', *username, '-h', *appdir]
-      user: root
-   # ...
-~~~
 
 ### Base Images
 
