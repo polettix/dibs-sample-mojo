@@ -469,14 +469,82 @@ expand the path for us. In other terms, the associative array:
 is interpreted as a request to expand the path `.` relative to the mount
 point of the `pack` directory inside the container.
 
-In our case, the two prerequisite scripts are quite simple:
+In our case, the two prerequisite scripts are quite simple. This is the
+one for build:
 
 ~~~
 #!/bin/sh
 apk --no-cache add build-base perl perl-dev
 ~~~
-{:title=pack/prereqs/alpine.build}
 
+and this the one for bundle:
+
+~~~
+#!/bin/sh
+apk --no-cache add perl
+~~~
+
+Of course we could have obtained pretty much the same result with an
+immediate script, but this gives us the possibility to later expand our
+project to produce images based on different distributions using the same
+scaffolding.
+
+## Files (De)Selection
+
+The other file we added in the project is `pack/dibsignore`. Again, the
+position in `pack` is because that directory is available inside the
+container.
+
+A *dibsignore* file is much like a *gitignore*, having the same syntax and
+semantics. It is used by program `install/with-dibsignore` in
+[dibspack-basic][] to filter out unwanted files/directories when selecting
+artifacts (most probably, those that survive will be part of the final
+image).
+
+In our case, the file contains the following:
+
+~~~
+/.buildpacks
+/cpanfile
+/.git
+~~~
+
+i.e. we want to get everything apart file `.buildpacks` (which is used by
+Dokku while building the image), file `cpanfile` (not needed after
+compilation of modules) and directory `.git` (not needed in the final
+image).
+
+Dibsignore files are usually located in the source tree but, again, we are
+in *alien mode* and the original code does not have them. This is why we
+have to specify an absolute location in the configuration file:
+
+~~~ yaml
+actions:
+   # ...
+   build-operations:
+      # ...
+      - name: copy needed artifacts in cache
+        pack: basic
+        path: install/with-dibsignore
+        args: ['--src', *appsrc,
+               '--dst', *appcache,
+               '--dibsignore', {path_pack: 'dibsignore'}]
+        user: root
+
+~~~
+
+Again, we specify the path to the dibsignore file asking Dibs to expand it
+for us, selecting file `dibsignore` inside the mount point for
+sub-directory `pack`.
+
+# So What Now?
+
+If you were teased... great!
+
+Installing [dibs][] is not difficult (clone the repo, run `carton` and set
+`PERL5LIB`), but it will be easier shortly (using a Docker image). In the
+meantime, *any* feedback (well, any *constructive* feedback) is more than
+welcome!
 
 
 [dibs]: https://github.com/polettix/dibs
