@@ -537,6 +537,27 @@ Again, we specify the path to the dibsignore file asking Dibs to expand it
 for us, selecting file `dibsignore` inside the mount point for
 sub-directory `pack`.
 
+# Do We Ever Run `dibs`?
+
+Sure we do!
+
+First of all, we generate the base images. This is only needed once, after
+the images are saved in Docker they will be used over and over:
+
+~~~
+$ dibs -A builder bundler
+~~~
+
+After this, we can do the building and bundling using the *quick*
+versions. Until we change anything in the prerequisites, these command are
+all that's needed:
+
+~~~
+$ dibs -A buildq bundleq
+~~~
+
+And yes... this is it!
+
 # So What Now?
 
 If you were teased... great!
