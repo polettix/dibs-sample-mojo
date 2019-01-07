@@ -537,7 +537,7 @@ Again, we specify the path to the dibsignore file asking Dibs to expand it
 for us, selecting file `dibsignore` inside the mount point for
 sub-directory `pack`.
 
-# Do We Ever Run `dibs`?
+# Do We Ever Run dibs?
 
 Sure we do!
 
