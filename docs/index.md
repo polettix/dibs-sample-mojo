@@ -578,3 +578,4 @@ welcome!
 [dsm-dibs-yaml]: https://github.com/polettix/dibs-sample-mojo/blob/master/dibs.yml
 [perl]: https://www.perl.org/
 [dibspack-basic]: https://github.com/polettix/dibspack-basic
+[cpanm]: https://github.com/miyagawa/cpanminus
