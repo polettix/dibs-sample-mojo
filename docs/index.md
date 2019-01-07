@@ -232,8 +232,200 @@ packs:
       origin: https://github.com/polettix/dibspack-basic.git
 ~~~
 
+We assign name `basic`, so this is how we will refer to it in the rest of
+the configuration.
 
+## Actions
 
+The `actions` section is by far the most crowded in the configuration
+file.
+
+### "Abstract" Actions
+
+~~~ yaml
+actions:
+   # ...
+   buildish:
+      envile:
+         DIBS_PREREQS: build
+   # ...
+   bundlish:
+      envile:
+         DIBS_PREREQS: bundle
+~~~
+
+Actions `buildish` and `bundlish` are not real, full-fleshed actions. They
+only serve the purpose of defining some basic characteristics (in this
+case, the definition of an envile variable, i.e. a variable that is saved
+as a file to avoid cluttering the environment) and not an real action.
+This allows inheriting those characteristics from other actions (`builder`
+and `build` both inherit from `buildish`, as well as `bundler` and
+`bundle` inherit from `bundlish`). In the specific case, the
+`DIBS_PREREQS` envile sets the `step` for action `ensure-prereqs` and will
+eventually allow selecting between file `pack/prereqs/alpine.build` and
+`pack/prereqs/alpine.bundle`.
+
+### Pure Strokes
+
+Actions `ensure-prereqs` and `add-normal-user` are pure *strokes*, defined
+for convenience. Strictly speaking, `add-normal-user` is only used once
+(inside `base-layers`) and might be *inlined*; on the other hand,
+`ensure-prereqs` is used multiple times (in `base-layers` as well as in
+`build` and `bundle`), so it's better to define it once and the use many
+times.
+
+~~~ yaml
+actions:
+   ensure-prereqs:
+      pack: basic
+      path: prereqs
+      args: ['-w', {path_pack: '.'}]
+      user: root
+   add-normal-user:
+      pack: basic
+      path: wrapexec/suexec
+      args: ['-u', *username, '-h', *appdir]
+      user: root
+   # ...
+~~~
+
+### Base Images
+
+Action `base-layers` includes all the actions to generate base images for
+building and bundling, which is why is included as an action inside
+`builder` and `bundler`.
+
+~~~ yaml
+actions:
+   # ...
+   base-layers:
+      - from: *base
+      - add-normal-user
+      - ensure-prereqs
+   # ...
+   builder:
+      extends: buildish
+      actions:
+         - base-layers
+         - tags: *builder
+   # ...
+   bundler:
+      extends: bundlish
+      actions:
+         - base-layers
+         - tags: *bundler
+   # ...
+~~~
+
+Actions `builder` and `bundler` take care to generate the base images for
+respectively doing the build and bundle actions. For this reason,
+`builder`'s last action is a frame to save image `sample-mojo-builder:1.0`
+(as per alias `*builder`) which is then used as a base image by `build`
+and `buildq`. Same applies to `bundler`/`bundle`/`bundleq`.
+
+### Build Actions
+
+The two main steps of building - i.e. compiling modules and selecting the
+needed artifacts and copying them in the cache - are defined in
+`build-operations`. This allows putting those two steps in both `build`
+and `buildq`.
+
+~~~ yaml
+actions:
+   # ...
+   build-operations:
+      - name: compile modules
+        pack: basic
+        path: perl/build
+        user: *username
+      - name: copy needed artifacts in cache
+        pack: basic
+        path: install/with-dibsignore
+        args: ['--src', *appsrc,
+               '--dst', *appcache,
+               '--dibsignore', {path_pack: 'dibsignore'}]
+        user: root
+   build:
+      extends: buildish
+      actions:
+         - from: *builder
+         - ensure-prereqs
+         - build-operations
+   buildq:
+      - from: *builder
+      - build-operations
+   # ...
+~~~
+
+Action`build` has a *quick* counterpart `buildq` that basically skip
+action `ensure-prereqs`. This is an optimization: considering that
+OS-level prerequisites will change rarely, most of the times we can be
+sure that whatever was installed in the base image `builder` already
+contains whatever wee need.
+
+Most strokes are executed as `root`, with the exception of modules
+compilation that is executed as `urist` (i.e. the non-privileged
+username). This user is available inside both the builder and the bundler
+images thanks to step `add-normal-user`. Compiling with non-privileged
+users is often a good security measure.
+
+Last, it should be noted that neither 'build` nor `buildq` results in an
+image: the build phase is only instrumental to producing and isolating the
+artifacts for the final bundle, so we can throw the containers away after
+they have done their job.
+
+### Bundle Actions
+
+Most considerations for build actions also apply to bundling, considering
+that they have the same structure, so they will not be repeated here.
+
+The two main actions for *bundling* are collected in `bundle-operations`,
+and consist in installing the cached artifacts in place (i.e. inside
+`/app`) and then adding the program that interprets `Procfile`s.
+
+~~~ yaml
+actions:
+   # ...
+   bundle-operations:
+      - name: move artifacts in place
+        pack: basic
+        path: install/plain-copy
+        args: [*appcache, *appdir]
+        user: root
+      - name: setup Procfile
+        pack: basic
+        path: procfile/add
+        user: root
+        env:
+           PORT: 56789
+        commit:
+           entrypoint: ['/procfilerun']
+           cmd: []
+           user: *username
+           workdir: *appdir
+      - tags: *target
+   bundle:
+      extends: bundlish
+      actions:
+         - from: *bundler
+         - ensure-prereqs
+         - bundle-operations
+   bundleq:
+      - from: *bundler
+      - bundle-operations
+~~~
+
+Note that action for `setup Procfile` is different from other because
+there are two additional keys:
+
+- `env` sets an environment variable that will stick in the generated
+  container image, providing a default value for a variable that is used
+  in the `Procfile`;
+- `commit` sets some characteristics of the image, e.g. the default user
+  for running containers based on the image, the entry point, etc.
+
+Differently from the build actios, both `bundle` and `bundleq` end up
+saving the image, which is our target!
 
 [dibs]: https://github.com/polettix/dibs
 [Dockerfile]: https://docs.docker.com/engine/reference/builder/
