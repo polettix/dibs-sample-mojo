@@ -202,18 +202,18 @@ through aliases.
 The first four items specify image names and tags, the first one being the
 starting point (anchor `&base`), the two following ones representing base
 images for building and bundling, and the last one (anchor `&target`)
-represeting our target image name. We will define two intermediate
-container images in order to efficiently support a build phase (leveraging
-an image with build tools inside) and a bundle phase (including only
-runtime tools).
+representing our target image name. We define two intermediate container
+images in order to efficiently support a build phase (leveraging an image
+with build tools inside) and a bundle phase (including only runtime
+tools).
 
 The build step, i.e. when Perl modules are compiled and installed, will be
 performed using an unprivileged user account; anchor `&username` defines
 the name for such account, and will be used both to create the user and to
 run the build of modules, as well as it is set as the default user for
 running the target container. Defining its value in one single place will
-allow us to select some other username (e.g. one that is *not* tied to
-game Dwarf Fortress!).
+allow us to select some other username, should we need it (e.g. one that
+is *not* tied to game Dwarf Fortress!).
 
 The last three items define paths. As anticipated, we will generate
 artifacts in a build phase, at the end of which we select the needed ones
@@ -357,7 +357,7 @@ actions:
    # ...
 ~~~
 
-Action `build` has a *quick* counterpart `buildq` that basically skip
+Action `build` has a *quick* counterpart `buildq` that basically skips
 action `ensure-prereqs`. This is an optimization: considering that
 OS-level prerequisites will change rarely, most of the times we can be
 sure that whatever was installed in the base image `builder` already
@@ -415,12 +415,12 @@ actions:
       - bundle-operations
 ~~~
 
-Note that action for `setup Procfile` is different from other because
+Note that action for `setup Procfile` is different from others because
 there are two additional keys:
 
 - `env` sets an environment variable that will stick in the generated
-  container image, providing a default value for a variable that is used
-  in the `Procfile`;
+  container image, providing a default value for `PORT` (a variable that
+  is used in the `Procfile`);
 - `commit` sets some characteristics of the image, e.g. the default user
   for running containers based on the image, the entry point, etc.
 
@@ -429,7 +429,7 @@ saving the image, which is our target!
 
 # Other files
 
-Our project directory also include additional files that ease the build
+Our project directory also includes additional files that ease the build
 and bundle phases.
 
 ## Prerequisites
@@ -466,7 +466,7 @@ expand the path for us. In other terms, the associative array:
 {path_pack: '.'}
 ~~~
 
-is interpreted as a request to expand the path `.` relative to the mount
+is interpreted as a request to expand the path `"."` relative to the mount
 point of the `pack` directory inside the container.
 
 In our case, the two prerequisite scripts are quite simple. This is the
